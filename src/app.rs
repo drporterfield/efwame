@@ -82,8 +82,9 @@ impl eframe::App for BurnApp {
             });
 
             if ui.button("Fetch Data").clicked() {
-                tokio::spawn(async {
-                    if let Err(e) = get_http().await {
+                let url = self.url.clone();
+                tokio::spawn(async move {
+                    if let Err(e) = get_http(&url).await {
                         eprintln!("HTTP error: {}", e);
                     }
                 });
@@ -101,9 +102,9 @@ impl eframe::App for BurnApp {
     }
 }
 
-pub async fn get_http() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn get_http(url: &str) -> Result<(), Box<dyn std::error::Error>> {
     // Send a simple GET request to the target URL
-    let body = reqwest::get("https://www.example.com")
+    let body = reqwest::get(url)
         .await? // wait for the HTTP response
         .text() // read response body as text
         .await?; // wait for the full body to be collected
