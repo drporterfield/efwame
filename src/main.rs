@@ -3,7 +3,8 @@
 
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
-fn main() -> eframe::Result {
+#[tokio::main]
+async fn main() -> eframe::Result {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
 
     let native_options = eframe::NativeOptions {
@@ -12,7 +13,7 @@ fn main() -> eframe::Result {
             .with_min_inner_size([300.0, 220.0])
             .with_icon(
                 // NOTE: Adding an icon is optional
-                eframe::icon_data::from_png_bytes(&include_bytes!("../assets/icon-256.png")[..])
+                eframe::icon_data::from_png_bytes(&include_bytes!("../assets/bsm-square.png")[..])
                     .expect("Failed to load icon"),
             ),
         ..Default::default()
@@ -26,7 +27,8 @@ fn main() -> eframe::Result {
 
 // When compiling to web using trunk:
 #[cfg(target_arch = "wasm32")]
-fn main() {
+#[tokio::main]
+async fn main() {
     use eframe::wasm_bindgen::JsCast as _;
 
     // Redirect `log` message to `console.log` and friends:
