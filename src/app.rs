@@ -1,7 +1,7 @@
 use std::{
     sync::{Arc, Mutex},
 };
-#[derive(serde::Serialize)]
+#[derive(serde::Deserialize, serde::Serialize, Clone)]
 enum Download {
     None,
     InProgress,
@@ -12,16 +12,16 @@ enum Download {
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct BurnApp {
     url: String,
-    request_body: String,
     streaming: bool,
+    download: Arc<Mutex<String>>,
 }
 
 impl Default for BurnApp {
     fn default() -> Self {
         Self {
             url: "https://example.com".to_owned(),
-            request_body: "".to_owned(),
             streaming: false,
+            download: Arc::new(Mutex::new(String::new())),
         }
     }
 }
@@ -42,17 +42,13 @@ impl BurnApp {
     }
 }
 
-
 impl eframe::App for BurnApp {
     /// Called by the framework to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
 
-    /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
-        // For inspiration and more examples, go to https://emilk.github.io/egui
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
@@ -83,14 +79,16 @@ impl eframe::App for BurnApp {
 
             if ui.button("Fetch Data").clicked() {
                 let url = self.url.clone();
+                let download_lock = self.download.clone();
                 tokio::spawn(async move {
                     match get_http(&url).await {
-                        Ok(body) => println!("{}", body),
+                        Ok(body) => {*download_lock.lock().unwrap() = body;}, 
                         Err(e) => eprintln!("HTTP error: {}", e),
                     }
                 });
             }
-            
+
+            ui.label(self.download.lock().unwrap().clone());
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 //powered_by_egui_and_eframe(ui);
