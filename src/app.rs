@@ -1,6 +1,7 @@
-use std::{
-    sync::{Arc, Mutex},
-};
+use reqwest::blocking::Client;
+use std::time::Duration;
+use anyhow::{anyhow, Result};
+
 #[derive(serde::Deserialize, serde::Serialize, Clone)]
 enum Download {
     None,
@@ -13,7 +14,7 @@ enum Download {
 pub struct BurnApp {
     url: String,
     streaming: bool,
-    download: Arc<Mutex<String>>,
+    download: String,
 }
 
 impl Default for BurnApp {
@@ -21,7 +22,7 @@ impl Default for BurnApp {
         Self {
             url: "https://example.com".to_owned(),
             streaming: false,
-            download: Arc::new(Mutex::new(String::new())),
+            download: String::new(),
         }
     }
 }
@@ -79,35 +80,48 @@ impl eframe::App for BurnApp {
 
             if ui.button("Fetch Data").clicked() {
                 let url = self.url.clone();
-                let download_lock = self.download.clone();
-                tokio::spawn(async move {
-                    match get_http(&url).await {
-                        Ok(body) => {*download_lock.lock().unwrap() = body;}, 
-                        Err(e) => eprintln!("HTTP error: {}", e),
+                let res = get_http(&url, 10);
+                match res {
+                    Err(e) => self.download = e.to_string(),
+                    Ok(response) => {
+                        match response.text() {
+                            Ok(body) => self.download = body,
+                            Err(e) => println!("failed to read response body: {}", e), 
+                        }
                     }
-                });
+                }
             }
             egui::ScrollArea::vertical().show(ui, |ui|{
-                ui.label(self.download.lock().unwrap().clone());
+                ui.label(self.download.clone());
             });
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 //powered_by_egui_and_eframe(ui);
                 egui::warn_if_debug_build(ui);
             });
-
         });
-
     }
 }
 
-pub async fn get_http(url: &str) -> Result<String, Box<dyn std::error::Error>> {
-    // Send a simple GET request to the target URL
-    let body = reqwest::get(url)
-        .await? // wait for the HTTP response
-        .text() // read response body as text
-        .await?; // wait for the full body to be collected
+pub fn get_http(
+    url: &str, 
+    timeout: u64
+) -> Result<reqwest::blocking::Response> {
+    let client = Client::new();
+    let timeout = Duration::from_secs(timeout);
 
-    Ok(body)
+    let response = client.get(url).timeout(timeout).send()?;
+
+    // Process the response
+    if response.status().is_success() {
+        Ok(response)
+    } else {
+        // Create a custom error using anyhow
+        Err(anyhow!(
+            "Request failed with status: {:?}",
+            response.status()
+        ))
+    }
+
 }
 
