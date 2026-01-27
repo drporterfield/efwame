@@ -27,8 +27,7 @@ fn main() -> eframe::Result {
 
 // When compiling to web using trunk:
 #[cfg(target_arch = "wasm32")]
-#[tokio::main]
-async fn main() {
+fn main() {
     use eframe::wasm_bindgen::JsCast as _;
 
     // Redirect `log` message to `console.log` and friends:
