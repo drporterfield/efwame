@@ -87,8 +87,9 @@ impl eframe::App for BurnApp {
                     }
                 });
             }
-
-            ui.label(self.download.lock().unwrap().clone());
+            egui::ScrollArea::vertical().show(ui, |ui|{
+                ui.label(self.download.lock().unwrap().clone());
+            });
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 //powered_by_egui_and_eframe(ui);
